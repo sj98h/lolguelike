@@ -1,25 +1,39 @@
-import chalk from 'chalk';
 import readlineSync from 'readline-sync';
+import chalk from 'chalk';
 
 let turn = 1;
 
 class Player {
   constructor() {
     this.maxHp = 690;
-    this.hp = 690;
+    this.hp = this.maxHp;
     this.atk = 69; // 초기 공격력 69
     this.def = 38;
-    this.mov = 340;
+    this.initMov = 340;
+    this.mov = this.initMov; // 이속 조절용
     this.cond = 0;
+    this.qUse = false;
   }
 
-  attack(monster, giveDamage) {
+  attack(monster, giveDamage, player) {
     // 플레이어의 기본 공격
-    monster.hp -= giveDamage;
-    return chalk.blue(`기본 공격(A)!! 붙으면 강하다.. 피해-> -${giveDamage}`);
+    if (player.qUse) {
+      // q 사용 시
+      monster.hp -= giveDamage * 2;
+      player.qUse = false;
+      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
+    } else {
+      // q 사용 X
+      monster.hp -= giveDamage;
+      return chalk.blue(`기본 공격(A)!! 붙으면 강하다.. 피해-> -${giveDamage}`);
+    }
   }
 
-  skillQ() {}
+  skillQ(player) {
+    player.qUse = true;
+    player.mov *= 1.3;
+    return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화된다.');
+  }
   skillW() {}
   skillE() {}
   skillR() {}
@@ -74,11 +88,10 @@ const battle = async (stage, player, monster) => {
   const enemyDef = 1 - monster.def / (monster.def + 100); // 방어력으로 감소하는 피해 비율 (적)
 
   // ============실제 사용할 변수================
-  const receiveDamage = monster.atk * myDef; // 방어력 적용된 받는 대미지
-  const giveDamage = player.atk * enemyDef; // 방어력 적용된 주는 대미지
-  const qUse = false; // q 활성화 여부
-  const wShield = player.maxHp * 0.05; // w 보호막
-  const eDamage = giveDamage * 0.8; // e 스킬 피해
+  const receiveDamage = Math.floor(monster.atk * myDef); // 방어력 적용된 받는 대미지
+  const giveDamage = Math.floor(player.atk * enemyDef); // 방어력 적용된 주는 대미지
+  const wShield = Math.floor(player.maxHp * 0.05); // w 보호막
+  const eDamage = Math.floor(giveDamage * 0.8); // e 스킬 피해
   // ===========================================
 
   while (player.hp > 0) {
@@ -86,6 +99,7 @@ const battle = async (stage, player, monster) => {
 
     // 새로운 턴에 보호막 제거
     player.cond = null;
+
     displayStatus(stage, player, monster);
 
     // logs가 2개 넘게 쌓이면 첫번째 요소부터 제거
@@ -102,15 +116,22 @@ const battle = async (stage, player, monster) => {
     switch (choice) {
       // 기본 공격
       case 'A':
-        returnAct = player.attack(monster, giveDamage);
+        returnAct = player.attack(monster, giveDamage, player);
         break;
       case '?A':
         logs.push(chalk.dim('[도움말] 공격력의 100% 피해를 입힌다.'));
         continue;
       // Q 스킬
       case 'Q':
-        logs.push(chalk.blue(`결정타(Q)!! 다음 기본 공격이 강화된다.`));
+        returnAct = player.skillQ(player);
         break;
+      case '?Q':
+        logs.push(
+          chalk.dim(
+            '[도움말] 이번 턴 동안 이동 속도가 30% 증가하고, 다음 기본 공격이 200% 피해를 입힙니다.',
+          ),
+        );
+        continue;
       // W 스킬
       case 'W':
         player.cond += 50;
@@ -142,6 +163,8 @@ const battle = async (stage, player, monster) => {
       turn++;
     }
   }
+
+  // 플레이어 체력 0 로직 추가 예정
 };
 
 export async function startGame() {

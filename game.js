@@ -1,9 +1,12 @@
-import chalk from "chalk";
-import readlineSync from "readline-sync";
+import chalk from 'chalk';
+import readlineSync from 'readline-sync';
 
 class Player {
   constructor() {
-    this.hp = 100;
+    this.hp = 690;
+    this.atk = 69;
+    this.def = 38;
+    this.mov = 340;
   }
 
   attack() {
@@ -14,6 +17,10 @@ class Player {
 class Monster {
   constructor() {
     this.hp = 100;
+    this.atk = 10;
+    this.def = 20;
+    this.mov = 300;
+    this.mana = 200;
   }
 
   attack() {
@@ -22,11 +29,22 @@ class Monster {
 }
 
 function displayStatus(stage, player, monster) {
-  console.log(chalk.magentaBright(`\n=== Current Status ===`));
+  console.log(chalk.magentaBright(`\n=== 현재 상태 ===`));
   console.log(
-    chalk.cyanBright(`| Stage: ${stage} `) +
-      chalk.blueBright(`| 플레이어 정보`) +
-      chalk.redBright(`| 몬스터 정보 |`)
+    chalk.cyanBright(`| Stage: ${stage}\n`) +
+      // 플레이어 상태
+      chalk.blueBright(`| 플레이어 정보 `) +
+      chalk.green(`| 체력: ${player.hp} `) +
+      chalk.dim(`| 공격력: ${player.atk} `) +
+      chalk.yellowBright(`| 방어력: ${player.def} `) +
+      chalk.blueBright(`| 이동 속도: ${player.mov}\n`) +
+      // 몬스터 상태
+      chalk.redBright(`| 몬스터 정보 `) +
+      chalk.green(`| 체력: ${monster.hp} `) +
+      chalk.dim(`| 공격력: ${monster.atk} `) +
+      chalk.yellowBright(`| 방어력: ${monster.def} `) +
+      chalk.blueBright(`| 이동 속도: ${monster.mov} `) +
+      chalk.cyan(`| 마나: ${monster.mana}`),
   );
   console.log(chalk.magentaBright(`=====================\n`));
 }
@@ -40,8 +58,8 @@ const battle = async (stage, player, monster) => {
 
     logs.forEach((log) => console.log(log));
 
-    console.log(chalk.green(`\n1. 공격한다 2. 아무것도 하지않는다.`));
-    const choice = readlineSync.question("당신의 선택은? ");
+    console.log(chalk.green(`\nA. 기본 공격 Q. 결정타 W. 용기 E. 심판 R. 데마시아의 정의`));
+    const choice = readlineSync.question('당신의 선택은? ');
 
     // 플레이어의 선택에 따라 다음 행동 처리
     logs.push(chalk.green(`${choice}를 선택하셨습니다.`));

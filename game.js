@@ -5,7 +5,7 @@
  * ㅁ2. 방어력, 이동 속도는 변동 후 원복되어야 한다. 따라서 같은 값을 참조하는 변수를 추가해야 한다.
  * 3. 소리가 나오면 좋겠다.
  * 4. 메시지 간 딜레이를 넣으면 좋겠다
- * 5. 점멸 (도망) 기능. 추가 기획 필요 체력이 50% 이하일 때만 사용 가능하게, 성공확률은 이속 공식을 참조하여 회피 확률과 동일하게 하면 될듯
+ * ㅁ5. 점멸 (도망) 기능. 추가 기획 필요 체력이 50% 이하일 때만 사용 가능하게, 성공확률은 이속 공식을 참조하여 회피 확률과 동일하게 하면 될듯
  * 6. 적 클래스 추가. 일반 몹 3개, 보스몹 1개 (유미, 티모, 다리우스) / (트린다미어)
  * 7. 게임 시작 시 각 스테이지에서 출현할 몹들을 정할 로직.
  * 배열에 1,2,3 요소가 각각 3개씩 들어가게, -> 3개 단위로 중복되지 않게 1, 2, 3을 할당
@@ -25,21 +25,20 @@ let turn = 1;
 class Player {
   constructor() {
     this.maxHp = 690;
-    this.hp = this.maxHp;
+    this.hp = 690;
     this.atk = 69; // 초기 공격력 69
     this.def = 38;
     this.initMov = 340;
     this.mov = this.initMov; // 이속 조절용
     this.cond = 0;
+    this.rOn = true;
     this.effects = []; // Effect 인스턴스를 할당하여 사용
   }
 
   applyEffect(effect) {
     // 동일한 효과가 있는 경우
-    const existingEffect = this.effects.find((e) => e.type === effect.type);
-    if (existingEffect) {
-      return;
-    }
+    const isEffect = this.effects.find((e) => e.type === effect.type);
+    if (isEffect) return;
 
     this.effects.push(effect);
     effect.applyE(this);
@@ -108,8 +107,17 @@ class Player {
   }
 
   skillR(monster, rDamage) {
+    this.rOn = false;
     monster.hp -= rDamage;
     return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
+  }
+
+  flash(flashChance) {
+    if (Math.random() < flashChance) {
+      return false;
+    } else {
+      return chalk.yellow('아앗.. 벽플을 썼다... 부끄럽다.');
+    }
   }
 }
 
@@ -117,22 +125,20 @@ class Player {
 class Monster {
   constructor(stage) {
     this.maxHp = 10000;
-    this.hp = 10000;
+    this.hp = this.maxHp;
     this.initAtk = 10;
     this.atk = this.initAtk;
     this.initDef = 10;
     this.def = this.initDef;
-    this.mov = 300;
+    this.mov = 380;
     this.mana = 200;
     this.effects = []; // Effect 인스턴스를 할당하여 사용
   }
 
   applyEffect(effect) {
     // 동일한 효과가 있는 경우
-    const existingEffect = this.effects.find((e) => e.type === effect.type);
-    if (existingEffect) {
-      return;
-    }
+    const isEffect = this.effects.find((e) => e.type === effect.type);
+    if (isEffect) return;
 
     this.effects.push(effect);
     effect.applyE(this);
@@ -213,6 +219,7 @@ const battle = async (stage, player, monster) => {
     const wShield = Math.floor(player.maxHp * 0.05); // w 보호막
     const eDamage = Math.floor(giveDamage * 0.8); // e 스킬 피해
     const rDamage = Math.floor((monster.maxHp - monster.hp) * 0.3); // e 스킬 피해
+    const flashChance = 0.1 + (0.05 * (player.mov - monster.mov)) / 100; // 점멸 확률, 표시용은 100 곱하여 사용
     // ===========================================
     console.clear();
 
@@ -224,7 +231,11 @@ const battle = async (stage, player, monster) => {
     // 로그 출력
     logs.forEach((log) => console.log(log));
 
-    console.log(chalk.green(`\nA.기본 공격 Q.결정타 W.용기 E.심판 R.데마시아의 정의`));
+    console.log(
+      chalk.green(
+        `\nA.기본 공격 Q.결정타 W.용기 E.심판 R.데마시아의 정의 F.점멸(${Math.floor(flashChance * 100)}%)`,
+      ),
+    );
     const choice = readlineSync.question('당신의 선택은? ').toUpperCase();
 
     // 플레이어의 선택에 따라 다음 행동 처리
@@ -235,7 +246,7 @@ const battle = async (stage, player, monster) => {
         returnAct = player.attack(monster, giveDamage, player);
         break;
       case '?A':
-        logs.push(chalk.dim('[도움말] 공격력의 100% 피해를 입힌다.'));
+        logs.push(chalk.dim('[도움말] 공격력의 100% 피해를 입힙니다.'));
         continue;
       // Q 스킬
       case 'Q':
@@ -244,7 +255,7 @@ const battle = async (stage, player, monster) => {
       case '?Q':
         logs.push(
           chalk.dim(
-            '[도움말] 이번 턴 동안 이동 속도가 30% 증가하고, 다음 기본 공격이 200% 피해를 입힙니다.',
+            '[도움말] 다음 턴까지 이동 속도가 30% 증가하고, 다음 턴 기본 공격이 200% 피해를 입힙니다.',
           ),
         );
         continue;
@@ -252,24 +263,68 @@ const battle = async (stage, player, monster) => {
       case 'W':
         returnAct = player.skillW(wShield);
         break;
+      case '?W':
+        logs.push(chalk.dim('[도움말] 다음 턴까지 최대 체력의 5%만큼 보호막을 얻습니다.'));
+        continue;
       // E 스킬
       case 'E':
         returnAct = player.skillE(monster, eDamage);
         break;
+      case '?E':
+        logs.push(
+          chalk.dim(
+            '[도움말] 공격력의 80% 피해를 입히고, 적의 방어력을 다음 턴까지 30% 감소시킵니다.',
+          ),
+        );
+        continue;
       // 궁
       case 'R':
-        returnAct = player.skillR(monster, rDamage);
+        if (!player.rOn) {
+          logs.push(chalk.yellow(`궁극기는 스테이지 당 한 번만 사용할 수 있습니다.`));
+          continue;
+        } else {
+          returnAct = player.skillR(monster, rDamage);
+        }
         break;
+      case '?R':
+        logs.push(
+          chalk.dim(
+            '[도움말] 잃은 체력의 30%만큼 고정 피해를 입힙니다. 스테이지마다 한 번만 사용할 수 있습니다.',
+          ),
+        );
+        continue;
+      // 점멸
+      case 'F':
+        if (player.hp > player.maxHp * 0.5) {
+          logs.push(chalk.yellow(`도망은 탑의 수치다... (현재 체력 50% 미만일 때 사용 가능)`));
+          continue;
+        } else {
+          returnAct = player.flash(flashChance);
+          if (!returnAct) {
+            return; // battle 종료 -> 다음 스테이지
+          }
+        }
+        break;
+      case '?F':
+        logs.push(
+          chalk.dim(
+            '[도움말] 체력이 50% 미만일 때 사용할 수 있다. 상대와의 이동속도 차이에 따라 성공 확률이 조정된다.',
+          ),
+        );
+        continue;
       // 잘못된 입력
       default:
-        logs.push(chalk.red('잘못된 입력입니다. 다시 시도해주세요.'));
+        logs.push(chalk.yellow('잘못된 입력입니다. 다시 시도해주세요.'));
         continue;
     }
 
     logs.push(returnAct);
 
-    // 몬스터 반격
-    if (monster.hp > 0) {
+    // 몬스터 체력 0
+    if (monster.hp <= 0) {
+      return;
+    } else {
+      // 몬스터 행동
       logs.push(monster.attack(player, receiveDamage));
       turn++;
     }
@@ -287,8 +342,8 @@ export async function startGame() {
     const monster = new Monster(stage);
     await battle(stage, player, monster);
 
-    // 스테이지 클리어 및 게임 종료 조건
-
+    // 스테이지 클리어
+    player.rOn = true;
     stage++;
   }
 }

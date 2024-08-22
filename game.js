@@ -10,8 +10,9 @@ toDo:
 7. 게임 시작 시 각 스테이지에서 출현할 몹들을 정할 로직.
     배열에 1,2,3 요소가 각각 3개씩 들어가게, -> 3개 단위로 중복되지 않게 1, 2, 3을 할당
     -> 마지막 요소는 -1 eg. [2,1,3, 1,2,3 3,1,2 ,-1] => 총 10 스테이지
-    1번 = 유미 / 2번 = 티모 / 3번 = 다리우스 / -1번 = 트린보스
+    1번 = 유미 / 2번 = 티모 / 3번 = 다리우스 / -1번 = 트린보스 // arr[stage-1]를 참조하여 적 인스턴스 생성
 8. 스테이지가 올라갈 수록 스탯 상향
+일반 몹은 스킬 1개씩만 구현... 너무 많다......
 */
 
 import readlineSync from 'readline-sync';
@@ -28,29 +29,63 @@ class Player {
     this.initMov = 340;
     this.mov = this.initMov; // 이속 조절용
     this.cond = 0;
-    this.qUse = false;
+    this.effects = []; // Effect 인스턴스를 할당하여 사용
   }
 
-  attack(monster, giveDamage, player) {
-    // 플레이어의 기본 공격
-    if (player.qUse) {
-      // q 사용 시
-      monster.hp -= giveDamage * 2;
-      player.qUse = false;
-      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
-    } else {
-      // q 사용 X
-      monster.hp -= giveDamage;
-      return chalk.blue(`기본 공격(A)!! 붙으면 강하다.. 피해-> -${giveDamage}`);
+  applyEffect(effect) {
+    // 중복 효과 제외하고 할당
+    this.effects = this.effects.filter((e) => e.type !== effect.type);
+    this.effects.push(effect);
+    effect.apply(this);
+  }
+
+  durEffect() {
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const effect = this.effects[i];
+      effect.duration--;
+      if (effect.duration <= 0) {
+        effect.remove(this);
+        this.effects.splice(i, 1);
+      }
     }
   }
 
-  skillQ(player) {
-    player.qUse = true;
-    player.mov *= 1.3;
-    return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화된다.');
+  attack(monster, giveDamage) {
+    const qEffect = this.effects.find((e) => e.type === 'Q');
+    if (qEffect && qEffect.active) {
+      monster.hp -= giveDamage * 2;
+      qEffect.active = false; // 공격 후 상태 효과 비활성화
+      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
+    } else {
+      monster.hp -= giveDamage;
+      return chalk.blue(`기본 공격(A)!! 피해-> -${giveDamage}`);
+    }
   }
-  skillW() {}
+
+  skillQ() {
+    this.applyEffect(
+      new Effect(
+        'Q',
+        2,
+        (player) => (player.mov = player.initMov * 1.3),
+        (player) => (player.mov = player.initMov),
+      ),
+    );
+    return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
+  }
+
+  skillW(wShield) {
+    this.applyEffect(
+      new Effect(
+        'W',
+        2,
+        (player) => (player.cond += wShield),
+        (player) => (player.cond = 0),
+      ),
+    );
+    // player.cond += 50;
+    return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
+  }
   skillE() {}
   skillR() {}
 }
@@ -77,6 +112,19 @@ class Monster {
   }
 }
 
+// 턴 수 적용을 받는 스탯 변동 효과
+// param: 스킬, 지속턴수, 변동된스탯, 원복된스탯
+class Effect {
+  constructor(type, duration, apply, remove) {
+    this.type = type;
+    this.duration = duration;
+    this.apply = apply;
+    this.remove = remove;
+    // 평타 강화용
+    this.active = true;
+  }
+}
+
 function displayStatus(stage, player, monster) {
   console.log(chalk.magentaBright(`\n=== 현재 상태 ===`));
   console.log(
@@ -98,6 +146,13 @@ function displayStatus(stage, player, monster) {
   console.log(chalk.magentaBright(`=====================\n`));
 }
 
+// 전투 중 턴 수 영향을 받는 스탯 변동 처리
+// param: 지속턴, 계수, 변동될 스탯
+const statDuration = (duration, stregth, stat) => {
+  if (duration > 0) stat *= stregth;
+  return statDuration;
+};
+
 const battle = async (stage, player, monster) => {
   let logs = [];
   const myDef = 1 - player.def / (player.def + 100); // 방어력으로 감소하는 피해 비율 (플레이어)
@@ -113,8 +168,9 @@ const battle = async (stage, player, monster) => {
   while (player.hp > 0) {
     console.clear();
 
+    player.durEffect();
     // 새로운 턴에 보호막 제거
-    player.cond = null;
+    // player.cond = null;
 
     displayStatus(stage, player, monster);
 
@@ -150,8 +206,7 @@ const battle = async (stage, player, monster) => {
         continue;
       // W 스킬
       case 'W':
-        player.cond += 50;
-        logs.push(chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`));
+        returnAct = player.skillW(wShield);
         break;
       // E 스킬
       case 'E':

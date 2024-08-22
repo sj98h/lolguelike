@@ -13,7 +13,10 @@
  * 1번 = 유미 / 2번 = 티모 / 3번 = 다리우스 / -1번 = 트린보스 // arr[stage-1]를 참조하여 적 인스턴스 생성
  * 8. 스테이지가 올라갈 수록 스탯 상향
  * 일반 몹은 스킬 1개씩만 구현... 너무 많다......
- * 회피 폐기하고 점멸 도주만 구현
+ * ㅁ회피 폐기하고 점멸 도주만 구현
+ * 9. 레벨 기능 + 레벨에 따른 스킬 해금 선택
+ * 10. 레벨을 올리려면 경험치도 있어야 한다.............
+ * 왜 추가할 게 계속 생기는거지........................
  */
 
 import readlineSync from 'readline-sync';
@@ -24,8 +27,9 @@ let turn = 1;
 // 플레이어
 class Player {
   constructor() {
+    this.lvl = 1;
     this.maxHp = 690;
-    this.hp = 690;
+    this.hp = this.maxHp;
     this.atk = 69; // 초기 공격력 69
     this.def = 38;
     this.initMov = 340;
@@ -33,6 +37,10 @@ class Player {
     this.cond = 0;
     this.rOn = true;
     this.effects = []; // Effect 인스턴스를 할당하여 사용
+    this.qHas = false;
+    this.wHas = false;
+    this.eHas = false;
+    this.rHas = false;
   }
 
   applyEffect(effect) {
@@ -68,48 +76,64 @@ class Player {
   }
 
   skillQ() {
-    this.applyEffect(
-      new Effect(
-        'Q',
-        2,
-        (target) => (target.mov = target.initMov * 1.3),
-        (target) => (target.mov = target.initMov),
-      ),
-    );
-    return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
+    if (this.qHas) {
+      this.applyEffect(
+        new Effect(
+          'Q',
+          2,
+          (target) => (target.mov = target.initMov * 1.3),
+          (target) => (target.mov = target.initMov),
+        ),
+      );
+      return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
   }
 
   skillW(wShield) {
-    this.applyEffect(
-      new Effect(
-        'W',
-        2,
-        (player) => (player.cond += wShield),
-        (player) => (player.cond = 0),
-      ),
-    );
-    return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
+    if (this.wHas) {
+      this.applyEffect(
+        new Effect(
+          'W',
+          2,
+          (player) => (player.cond += wShield),
+          (player) => (player.cond = 0),
+        ),
+      );
+      return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
   }
 
   skillE(monster, eDamage) {
-    monster.applyEffect(
-      new Effect(
-        'E',
-        3,
-        (monster) => (monster.def -= monster.initDef * 0.3),
-        (monster) => (monster.def = monster.initDef),
-      ),
-    );
-    monster.hp -= eDamage;
-    return chalk.blue(
-      `심판(E) 눈도 깜짝 안 한다~!. 피해-> -${eDamage} | 방어력-> -${monster.def * 0.3}`,
-    );
+    if (this.eHas) {
+      monster.applyEffect(
+        new Effect(
+          'E',
+          3,
+          (monster) => (monster.def -= monster.initDef * 0.3),
+          (monster) => (monster.def = monster.initDef),
+        ),
+      );
+      monster.hp -= eDamage;
+      return chalk.blue(
+        `심판(E) 눈도 깜짝 안 한다~!. 피해-> -${eDamage} | 방어력-> -${monster.def * 0.3}`,
+      );
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
   }
 
   skillR(monster, rDamage) {
-    this.rOn = false;
-    monster.hp -= rDamage;
-    return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
+    if (this.rHas) {
+      this.rOn = false;
+      monster.hp -= rDamage;
+      return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
   }
 
   flash(flashChance) {
@@ -183,7 +207,7 @@ class Effect {
 function displayStatus(stage, player, monster) {
   console.log(chalk.magentaBright(`\n=== 현재 상태 ===`));
   console.log(
-    chalk.cyanBright(`| Stage: ${stage} | Turn: ${turn}\n`) +
+    chalk.cyanBright(`| Stage: ${stage} | Turn: ${turn} | Level: ${player.lvl}\n`) +
       // 플레이어 상태
       chalk.blueBright(`| 플레이어 정보 `) +
       chalk.green(`| 체력: ${player.maxHp}/${player.hp} (+${player.cond || '0'}) `) +
@@ -232,9 +256,12 @@ const battle = async (stage, player, monster) => {
     logs.forEach((log) => console.log(log));
 
     console.log(
-      chalk.green(
-        `\nA.기본 공격 Q.결정타 W.용기 E.심판 R.데마시아의 정의 F.점멸(${Math.floor(flashChance * 100)}%)`,
-      ),
+      chalk.green(`\nA.기본 공격`),
+      player.qHas ? chalk.green(`Q.결정타`) : chalk.gray(`Q.결정타`),
+      player.wHas ? chalk.green(`W.용기`) : chalk.gray(`W.용기`),
+      player.eHas ? chalk.green(`E.심판`) : chalk.gray(`E.심판`),
+      player.rHas ? chalk.green(`R.데마시아의 정의`) : chalk.gray(`R.데마시아의 정의`),
+      chalk.green(`F.점멸(${Math.floor(flashChance * 100)}%)`),
     );
     const choice = readlineSync.question('당신의 선택은? ').toUpperCase();
 

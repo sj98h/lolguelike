@@ -5,7 +5,8 @@ export class Player {
     this.lvl = 1;
     this.maxHp = 690;
     this.hp = this.maxHp;
-    this.atk = 69; // 초기 공격력 69
+    this.initAtk = 69; // 초기 공격력 69
+    this.atk = this.initAtk;
     this.def = 38;
     this.initMov = 340;
     this.mov = this.initMov; // 이속 조절용
@@ -242,6 +243,82 @@ export class Teemo extends Monster {
   }
 }
 
+// 베인
+export class Vayne extends Monster {
+  constructor(stage) {
+    super(stage);
+    this.name = '베인';
+    this.maxHp = 550 + (stage - 1) * 103;
+    this.hp = this.maxHp;
+    this.initAtk = 1 + (stage - 1) * 2;
+    this.atk = this.initAtk;
+    this.initDef = 23 + (stage - 1) * 4;
+    this.def = this.initDef;
+    this.mov = 330;
+    this.mana = 231;
+    this.manaRegen = 6;
+  }
+  // w 스킬
+  skillW(player, receiveDamage) {
+    // 기본 공격 3회 시 최대 체력의 10% 만큼 고정 피해 입히는 로직 필요
+    Shield.isShield(player, receiveDamage, 1.5);
+    return chalk.red(`${this.name}의 학살 피해-> -${receiveDamage * 1.5}`);
+  }
+}
+
+// 트린다미어
+export class Tryndamere extends Monster {
+  constructor(stage) {
+    super(stage);
+    this.name = '트린다미어';
+    this.maxHp = 696 + (stage - 1) * 108;
+    this.hp = this.maxHp;
+    this.initAtk = 66 + (stage - 1) * 4;
+    this.atk = this.initAtk;
+    this.initDef = 33 + (stage - 1) * 4;
+    this.def = this.initDef;
+    this.mov = 345;
+    this.rage = 0;
+    this.mana = null;
+    this.manaRegen = null;
+  }
+  // q 스킬
+  skillQ() {
+    // 분노 = 0 / 분노 * 2 만큼 체력 회복
+    this.hp += this.rage * 2;
+    this.rage = 0;
+    return chalk.red(`${this.name}가 피를 갈망한다.. 회복-> +${this.rage * 2}`);
+  }
+  // w 스킬
+  skillW(player) {
+    // 공격력 이속 10% 감소
+    player.applyEffect(
+      new Effect(
+        '조롱',
+        3,
+        (target) => {
+          target.mov = target.mov * 0.9;
+          target.atk = target.mov * 0.9;
+        },
+        (target) => {
+          target.mov = target.initMov;
+          target.atk = target.initAtk;
+        },
+        false,
+      ),
+    );
+    return chalk.red(
+      `${this.name}가 놀린다.. 공격력/이속 감소-> -${player.atk * 0.1}/-${player.mov * 0.1}`,
+    );
+  }
+  // e 스킬
+  skillE(player) {
+    // 공격력 300% 피해
+
+    return chalk.red(`${this.name}가 피를 갈망한다.. 회복-> +${this.rage * 2}`);
+  }
+}
+
 // 다리우스
 export class Darius extends Monster {
   constructor(stage) {
@@ -262,7 +339,7 @@ export class Darius extends Monster {
     this.mana -= 35;
     // 50% 확률로 잃은 체력의 5% 회복 추가 예정
     Shield.isShield(player, receiveDamage, 1.5);
-    return chalk.red(`${this.name}의 실명 다트! 안 보인다.. 피해-> -${receiveDamage * 1.5}`);
+    return chalk.red(`${this.name}의 학살..! 피해-> -${receiveDamage * 1.5}`);
   }
 }
 

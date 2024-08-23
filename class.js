@@ -1,0 +1,197 @@
+import chalk from 'chalk';
+
+export class Player {
+  constructor() {
+    this.lvl = 1;
+    this.maxHp = 690;
+    this.hp = this.maxHp;
+    this.atk = 69; // 초기 공격력 69
+    this.def = 38;
+    this.initMov = 340;
+    this.mov = this.initMov; // 이속 조절용
+    this.cond = 0;
+    this.rOn = true;
+    this.effects = []; // Effect 인스턴스를 할당하여 사용
+    this.qHas = false;
+    this.wHas = false;
+    this.eHas = false;
+    this.rHas = false;
+  }
+
+  applyEffect(effect) {
+    // 동일한 효과가 있는 경우
+    const isEffect = this.effects.find((e) => e.type === effect.type);
+    if (isEffect) return;
+
+    this.effects.push(effect);
+    effect.applyE(this);
+  }
+
+  durEffect() {
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const effect = this.effects[i];
+      effect.duration--;
+      if (effect.duration <= 0) {
+        effect.removeE(this);
+        this.effects.splice(i, 1);
+      }
+    }
+  }
+
+  attack(monster, giveDamage) {
+    const qEffect = this.effects.find((e) => e.type === 'Q');
+    if (qEffect && qEffect.active) {
+      monster.hp -= giveDamage * 2;
+      qEffect.active = false; // 공격 후 상태 효과 비활성화
+      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
+    } else {
+      monster.hp -= giveDamage;
+      return chalk.blue(`기본 공격(A)!! 피해-> -${giveDamage}`);
+    }
+  }
+
+  skillQ() {
+    if (this.qHas) {
+      this.applyEffect(
+        new Effect(
+          'Q',
+          2,
+          (target) => (target.mov = target.initMov * 1.3),
+          (target) => (target.mov = target.initMov),
+        ),
+      );
+      return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
+  }
+
+  skillW(wShield) {
+    if (this.wHas) {
+      this.applyEffect(
+        new Effect(
+          'W',
+          2,
+          (target) => (target.cond += wShield),
+          (target) => (target.cond = 0),
+        ),
+      );
+      return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
+  }
+
+  skillE(monster, eDamage) {
+    if (this.eHas) {
+      monster.applyEffect(
+        new Effect(
+          'E',
+          3,
+          (monster) => (monster.def -= monster.initDef * 0.3),
+          (monster) => (monster.def = monster.initDef),
+        ),
+      );
+      monster.hp -= eDamage;
+      return chalk.blue(
+        `심판(E) 눈도 깜짝 안 한다~!. 피해-> -${eDamage} | 방어력-> -${monster.def * 0.3}`,
+      );
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
+  }
+
+  skillR(monster, rDamage) {
+    if (this.rHas) {
+      this.rOn = false;
+      monster.hp -= rDamage;
+      return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
+    } else {
+      return chalk.yellow('스킬을 배우지 않았습니다.');
+    }
+  }
+
+  flash(flashChance) {
+    if (Math.random() < flashChance) {
+      return false;
+    } else {
+      return chalk.yellow('아앗.. 벽플을 썼다... 부끄럽다.');
+    }
+  }
+}
+
+// 적
+export class Monster {
+  constructor(stage) {
+    this.maxHp = 100;
+    this.hp = this.maxHp;
+    this.initAtk = 10;
+    this.atk = this.initAtk;
+    this.initDef = 10;
+    this.def = this.initDef;
+    this.mov = 380;
+    this.mana = 200;
+    this.effects = []; // Effect 인스턴스를 할당하여 사용
+  }
+
+  applyEffect(effect) {
+    // 동일한 효과가 있는 경우
+    const isEffect = this.effects.find((e) => e.type === effect.type);
+    if (isEffect) return;
+
+    this.effects.push(effect);
+    effect.applyE(this);
+  }
+
+  durEffect() {
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const effect = this.effects[i];
+      effect.duration--;
+      if (effect.duration <= 0) {
+        effect.removeE(this);
+        this.effects.splice(i, 1);
+      }
+    }
+  }
+
+  attack(player, receiveDamage) {
+    // 몬스터의 기본 공격
+    if (player.cond >= receiveDamage) {
+      player.cond -= receiveDamage;
+    } else {
+      player.hp -= receiveDamage - player.cond;
+      player.cond = 0;
+    }
+    return chalk.red(`몬스터가 때려요. 피해-> -${receiveDamage}`);
+  }
+}
+
+// monster 자식 클래스
+export class Yumi extends Monster {
+  constructor(stage) {
+    super(stage);
+    this.name = '유미';
+    this.maxHp = 500 + (stage - 1) * 69;
+    this.hp = this.maxHp;
+    this.initAtk = 49 + (stage - 1) * 3;
+    this.atk = this.initAtk;
+    this.initDef = 25 + (stage - 1) * 4;
+    this.def = this.initDef;
+    this.mov = 330;
+    this.mana = 440;
+  }
+  // q 스킬 메소드
+}
+
+// 턴 수 적용을 받는 스탯 변동 효과
+// param: 스킬, 지속턴수, 변동된스탯, 원복된스탯
+export class Effect {
+  constructor(type, duration, applyE, removeE) {
+    this.type = type;
+    this.duration = duration;
+    this.applyE = applyE;
+    this.removeE = removeE;
+    // 평타 강화용
+    this.active = true;
+  }
+}

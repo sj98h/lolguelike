@@ -15,7 +15,7 @@
  * 일반 몹은 스킬 1개씩만 구현... 너무 많다......
  * ㅁ회피 폐기하고 점멸 도주만 구현
  * 9. 레벨 기능 + 레벨에 따른 스킬 해금 선택
- * 10. 레벨을 올리려면 경험치도 있어야 한다.............
+ * ㅁ10. 레벨을 올리려면 경험치도 있어야 한다............. / 경험치는 폐기
  * 왜 추가할 게 계속 생기는거지........................
  * 11. 안배운 스킬 선택시 스킬 효과 턴이 소모됨
  * eg. Q 스킬 사용 후 배우지 않은 R 스킬 선택 시 Q 이속 증가 증발
@@ -23,188 +23,9 @@
 
 import readlineSync from 'readline-sync';
 import chalk from 'chalk';
+import { Player, Yumi } from './class.js';
 
 let turn = 1;
-
-// 플레이어
-class Player {
-  constructor() {
-    this.lvl = 1;
-    this.maxHp = 690;
-    this.hp = this.maxHp;
-    this.atk = 69; // 초기 공격력 69
-    this.def = 38;
-    this.initMov = 340;
-    this.mov = this.initMov; // 이속 조절용
-    this.cond = 0;
-    this.rOn = true;
-    this.effects = []; // Effect 인스턴스를 할당하여 사용
-    this.qHas = false;
-    this.wHas = false;
-    this.eHas = false;
-    this.rHas = false;
-  }
-
-  applyEffect(effect) {
-    // 동일한 효과가 있는 경우
-    const isEffect = this.effects.find((e) => e.type === effect.type);
-    if (isEffect) return;
-
-    this.effects.push(effect);
-    effect.applyE(this);
-  }
-
-  durEffect() {
-    for (let i = this.effects.length - 1; i >= 0; i--) {
-      const effect = this.effects[i];
-      effect.duration--;
-      if (effect.duration <= 0) {
-        effect.removeE(this);
-        this.effects.splice(i, 1);
-      }
-    }
-  }
-
-  attack(monster, giveDamage) {
-    const qEffect = this.effects.find((e) => e.type === 'Q');
-    if (qEffect && qEffect.active) {
-      monster.hp -= giveDamage * 2;
-      qEffect.active = false; // 공격 후 상태 효과 비활성화
-      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
-    } else {
-      monster.hp -= giveDamage;
-      return chalk.blue(`기본 공격(A)!! 피해-> -${giveDamage}`);
-    }
-  }
-
-  skillQ() {
-    if (this.qHas) {
-      this.applyEffect(
-        new Effect(
-          'Q',
-          2,
-          (target) => (target.mov = target.initMov * 1.3),
-          (target) => (target.mov = target.initMov),
-        ),
-      );
-      return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
-    } else {
-      return chalk.yellow('스킬을 배우지 않았습니다.');
-    }
-  }
-
-  skillW(wShield) {
-    if (this.wHas) {
-      this.applyEffect(
-        new Effect(
-          'W',
-          2,
-          (target) => (target.cond += wShield),
-          (target) => (target.cond = 0),
-        ),
-      );
-      return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
-    } else {
-      return chalk.yellow('스킬을 배우지 않았습니다.');
-    }
-  }
-
-  skillE(monster, eDamage) {
-    if (this.eHas) {
-      monster.applyEffect(
-        new Effect(
-          'E',
-          3,
-          (monster) => (monster.def -= monster.initDef * 0.3),
-          (monster) => (monster.def = monster.initDef),
-        ),
-      );
-      monster.hp -= eDamage;
-      return chalk.blue(
-        `심판(E) 눈도 깜짝 안 한다~!. 피해-> -${eDamage} | 방어력-> -${monster.def * 0.3}`,
-      );
-    } else {
-      return chalk.yellow('스킬을 배우지 않았습니다.');
-    }
-  }
-
-  skillR(monster, rDamage) {
-    if (this.rHas) {
-      this.rOn = false;
-      monster.hp -= rDamage;
-      return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
-    } else {
-      return chalk.yellow('스킬을 배우지 않았습니다.');
-    }
-  }
-
-  flash(flashChance) {
-    if (Math.random() < flashChance) {
-      return false;
-    } else {
-      return chalk.yellow('아앗.. 벽플을 썼다... 부끄럽다.');
-    }
-  }
-}
-
-// 적
-class Monster {
-  constructor(stage) {
-    this.maxHp = 100;
-    this.hp = this.maxHp;
-    this.initAtk = 10;
-    this.atk = this.initAtk;
-    this.initDef = 10;
-    this.def = this.initDef;
-    this.mov = 380;
-    this.mana = 200;
-    this.effects = []; // Effect 인스턴스를 할당하여 사용
-  }
-
-  applyEffect(effect) {
-    // 동일한 효과가 있는 경우
-    const isEffect = this.effects.find((e) => e.type === effect.type);
-    if (isEffect) return;
-
-    this.effects.push(effect);
-    effect.applyE(this);
-  }
-
-  durEffect() {
-    for (let i = this.effects.length - 1; i >= 0; i--) {
-      const effect = this.effects[i];
-      effect.duration--;
-      if (effect.duration <= 0) {
-        effect.removeE(this);
-        this.effects.splice(i, 1);
-      }
-    }
-  }
-
-  attack(player, receiveDamage) {
-    // 몬스터의 기본 공격
-    if (player.cond >= receiveDamage) {
-      player.cond -= receiveDamage;
-    } else {
-      player.hp -= receiveDamage - player.cond;
-      player.cond = 0;
-    }
-    return chalk.red(`몬스터가 때려요. 피해-> -${receiveDamage}`);
-  }
-}
-
-// 턴 수 적용을 받는 스탯 변동 효과
-// param: 스킬, 지속턴수, 변동된스탯, 원복된스탯
-class Effect {
-  constructor(type, duration, applyE, removeE) {
-    this.type = type;
-    this.duration = duration;
-    this.applyE = applyE;
-    this.removeE = removeE;
-    // 평타 강화용
-    this.active = true;
-  }
-}
 
 function displayStatus(stage, player, monster) {
   console.log(chalk.magentaBright(`\n=== 현재 상태 ===`));
@@ -217,12 +38,12 @@ function displayStatus(stage, player, monster) {
       chalk.yellowBright(`| 방어력: ${player.def} `) +
       chalk.blueBright(`| 이동 속도: ${player.mov}\n`) +
       // 몬스터 상태
-      chalk.redBright(`| 몬스터 정보 `) +
+      chalk.redBright(`| ${monster.name} 정보 `) +
       chalk.green(`| 체력: ${monster.maxHp}/${monster.hp} `) +
       chalk.dim(`| 공격력: ${monster.atk} `) +
       chalk.yellowBright(`| 방어력: ${monster.def} `) +
       chalk.blueBright(`| 이동 속도: ${monster.mov} `) +
-      chalk.cyan(`| 마나: ${monster.mana}`),
+      (stage === 10 ? chalk.red(`| 분노: ${monster.rage}`) : chalk.cyan(`| 마나: ${monster.mana}`)),
   );
   console.log(chalk.magentaBright(`=====================\n`));
 }
@@ -376,6 +197,12 @@ const battle = async (stage, player, monster) => {
   }
 
   // 플레이어 체력 0 로직 추가 예정
+  // 첫 번째 메시지 출력
+  process.stdout.write(chalk.blue('눈 앞이 깜깜해진다...'));
+  readlineSync.question('');
+  process.stdout.write(chalk.red('탑속도로가 뚫리고 말았다... 게임 오버!'));
+  readlineSync.question('');
+  return process.exit(0);
 };
 
 export async function startGame() {
@@ -384,7 +211,7 @@ export async function startGame() {
   let stage = 1;
 
   while (stage <= 10) {
-    const monster = new Monster(stage);
+    const monster = new Yumi(stage);
     await battle(stage, player, monster);
 
     // 스테이지 클리어

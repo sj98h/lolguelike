@@ -17,6 +17,8 @@
  * 9. 레벨 기능 + 레벨에 따른 스킬 해금 선택
  * 10. 레벨을 올리려면 경험치도 있어야 한다.............
  * 왜 추가할 게 계속 생기는거지........................
+ * 11. 안배운 스킬 선택시 스킬 효과 턴이 소모됨
+ * eg. Q 스킬 사용 후 배우지 않은 R 스킬 선택 시 Q 이속 증가 증발
  */
 
 import readlineSync from 'readline-sync';
@@ -97,8 +99,8 @@ class Player {
         new Effect(
           'W',
           2,
-          (player) => (player.cond += wShield),
-          (player) => (player.cond = 0),
+          (target) => (target.cond += wShield),
+          (target) => (target.cond = 0),
         ),
       );
       return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
@@ -148,7 +150,7 @@ class Player {
 // 적
 class Monster {
   constructor(stage) {
-    this.maxHp = 10000;
+    this.maxHp = 100;
     this.hp = this.maxHp;
     this.initAtk = 10;
     this.atk = this.initAtk;
@@ -278,6 +280,10 @@ const battle = async (stage, player, monster) => {
       // Q 스킬
       case 'Q':
         returnAct = player.skillQ(player);
+        if (returnAct.includes('않')) {
+          logs.push(returnAct);
+          continue;
+        }
         break;
       case '?Q':
         logs.push(
@@ -289,6 +295,10 @@ const battle = async (stage, player, monster) => {
       // W 스킬
       case 'W':
         returnAct = player.skillW(wShield);
+        if (returnAct.includes('않')) {
+          logs.push(returnAct);
+          continue;
+        }
         break;
       case '?W':
         logs.push(chalk.dim('[도움말] 다음 턴까지 최대 체력의 5%만큼 보호막을 얻습니다.'));
@@ -296,6 +306,10 @@ const battle = async (stage, player, monster) => {
       // E 스킬
       case 'E':
         returnAct = player.skillE(monster, eDamage);
+        if (returnAct.includes('않')) {
+          logs.push(returnAct);
+          continue;
+        }
         break;
       case '?E':
         logs.push(
@@ -311,6 +325,10 @@ const battle = async (stage, player, monster) => {
           continue;
         } else {
           returnAct = player.skillR(monster, rDamage);
+          if (returnAct.includes('않')) {
+            logs.push(returnAct);
+            continue;
+          }
         }
         break;
       case '?R':
@@ -371,6 +389,67 @@ export async function startGame() {
 
     // 스테이지 클리어
     player.rOn = true;
+    player.lvl++;
+    turn = 1;
     stage++;
+    console.log(chalk.yellow('레벨업!! 스탯이 상승했습니다.'));
+
+    // 5레벨까지 스킬 습득
+    while (player.lvl <= 5) {
+      const choice = readlineSync.question('배울 스킬을 선택하세요. ').toUpperCase();
+
+      switch (choice) {
+        // Q 스킬
+        case 'Q':
+          if (!player.qHas) {
+            console.log(chalk.yellow('Q 스킬을 배웠습니다.'));
+            player.qHas = true;
+          } else {
+            console.log(chalk.yellow('이미 배운 스킬입니다'));
+            continue;
+          }
+          break;
+        // W 스킬
+        case 'W':
+          if (!player.wHas) {
+            console.log(chalk.yellow('W 스킬을 배웠습니다.'));
+            player.wHas = true;
+          } else {
+            console.log(chalk.yellow('이미 배운 스킬입니다'));
+            continue;
+          }
+          break;
+        // E 스킬
+        case 'E':
+          if (!player.eHas) {
+            console.log(chalk.yellow('E 스킬을 배웠습니다.'));
+            player.eHas = true;
+          } else {
+            console.log(chalk.yellow('이미 배운 스킬입니다'));
+            continue;
+          }
+          break;
+        // 궁
+        case 'R':
+          if (player.lvl < 5) {
+            console.log(chalk.yellow('R 스킬은 5레벨에 배울 수 있습니다.'));
+            continue;
+          } else {
+            console.log(chalk.yellow('R 스킬을 배웠습니다.'));
+            player.rHas = true;
+          }
+          break;
+        // 잘못된 입력
+        default:
+          console.log(chalk.yellow('잘못된 입력입니다. 다시 시도해주세요.'));
+          continue;
+      }
+      break;
+    }
+    // 스킬 습득 종료========================================
+
+    readlineSync.question('계속하기...');
   }
+
+  // 10스테이지 클리어 로직 추가 예정
 }

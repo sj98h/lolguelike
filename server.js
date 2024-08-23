@@ -3,6 +3,12 @@ import figlet from 'figlet';
 import readlineSync from 'readline-sync';
 import { startGame } from './game.js';
 
+const story = [
+  '이곳은 가혹한 랭겜의 협곡...',
+  '그 중에서도 가장 험난한 탑의 길.',
+  '탑의 패왕 가렌이 간다..!',
+];
+
 // 로비 화면을 출력하는 함수
 function displayLobby() {
   console.clear();
@@ -48,8 +54,12 @@ function handleUserInput() {
 
   switch (choice) {
     case '1':
-      console.log(chalk.green('게임을 시작합니다.'));
       // 여기에서 새로운 게임 시작 로직을 구현
+      console.clear();
+      story.forEach((e) => {
+        process.stdout.write(chalk.green(e));
+        readlineSync.question('>');
+      });
       startGame();
       break;
     case '2':

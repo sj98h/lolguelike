@@ -21,7 +21,11 @@ export class Player {
   applyEffect(effect) {
     // 동일한 효과가 있는 경우
     const isEffect = this.effects.find((e) => e.type === effect.type);
-    if (isEffect) return;
+    if (isEffect) {
+      // 기존 효과에서 턴수만 갱신
+      isEffect.duration = effect.duration;
+      return;
+    }
 
     this.effects.push(effect);
     effect.applyE(this);
@@ -39,14 +43,19 @@ export class Player {
   }
 
   attack(monster, giveDamage) {
-    const qEffect = this.effects.find((e) => e.type === 'Q');
-    if (qEffect && qEffect.active) {
-      monster.hp -= giveDamage * 2;
-      qEffect.active = false; // 공격 후 상태 효과 비활성화
-      return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
+    const blindEffect = this.effects.find((e) => e.type === '실명');
+    if (blindEffect) {
+      return chalk.blue(`실명 상태인 걸 깜빡했다!! 피해-> 0`);
     } else {
-      monster.hp -= giveDamage;
-      return chalk.blue(`기본 공격(A)!! 피해-> -${giveDamage}`);
+      const qEffect = this.effects.find((e) => e.type === 'Q');
+      if (qEffect && qEffect.active) {
+        monster.hp -= giveDamage * 2;
+        qEffect.active = false;
+        return chalk.blue(`기본 공격(A)!! 강화된 피해-> -${giveDamage * 2}`);
+      } else {
+        monster.hp -= giveDamage;
+        return chalk.blue(`기본 공격(A)!! 피해-> -${giveDamage}`);
+      }
     }
   }
 
@@ -217,20 +226,61 @@ export class Teemo extends Monster {
   skillQ(player, receiveDamage) {
     this.mana -= 80;
     // 실명 효과 로직이 필요함
+    player.applyEffect(
+      new Effect(
+        '실명',
+        2,
+        () => null,
+        () => null,
+        false,
+      ),
+    );
     Shield.isShield(player, receiveDamage, 1.1);
-    return chalk.red(`${this.name}의 실명 다트! 안 보인다.. 피해-> -${receiveDamage * 1.1}`);
+    return chalk.red(
+      `${this.name}의 실명 다트! 안 보인다.. 피해-> -${Math.floor(receiveDamage * 1.1)}`,
+    );
   }
 }
 
-// 턴 수 적용을 받는 스탯 변동 효과
-// param: 스킬, 지속턴수, 변동된스탯, 원복된스탯
+// 다리우스
+export class Darius extends Monster {
+  constructor(stage) {
+    super(stage);
+    this.name = '다리우스';
+    this.maxHp = 652 + (stage - 1) * 114;
+    this.hp = this.maxHp;
+    this.initAtk = 64 + (stage - 1) * 5;
+    this.atk = this.initAtk;
+    this.initDef = 39 + (stage - 1) * 5;
+    this.def = this.initDef;
+    this.mov = 340;
+    this.mana = 263;
+    this.manaRegen = 6;
+  }
+  // q 스킬
+  skillQ(player, receiveDamage) {
+    this.mana -= 35;
+    // 50% 확률로 잃은 체력의 5% 회복 추가 예정
+    Shield.isShield(player, receiveDamage, 1.5);
+    return chalk.red(`${this.name}의 실명 다트! 안 보인다.. 피해-> -${receiveDamage * 1.5}`);
+  }
+}
+
+/**
+ * 턴 수 적용을 받는 스탯 변동 효과
+ * @param {string} type - 효과 종류, 디버프는 표시 이름으로 활용
+ * @param {number} duration - 적용 받는 턴 수
+ * @param {function} applyE - 효과 적용 기능. 스탯 변동되게끔 작성
+ * @param {function} removeE - 효과 제거 기능. 스탯 원복
+ * @param {boolean} [isBuff=true] - 버프인지 여부. 버프는 생략, 디버프는 false
+ */
 export class Effect {
-  constructor(type, duration, applyE, removeE) {
+  constructor(type, duration, applyE, removeE, isBuff = true) {
     this.type = type;
     this.duration = duration;
     this.applyE = applyE;
     this.removeE = removeE;
-    // 평타 강화용
+    this.isBuff = isBuff;
     this.active = true;
   }
 }

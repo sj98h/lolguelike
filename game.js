@@ -19,15 +19,24 @@
  * 왜 추가할 게 계속 생기는거지........................
  * 11. 안배운 스킬 선택시 스킬 효과 턴이 소모됨
  * eg. Q 스킬 사용 후 배우지 않은 R 스킬 선택 시 Q 이속 증가 증발
+ * 12. 특정 스테이지 클리어 후 보상이 있으면 좋을듯
+ * eg. 1 스테이지 클리어 후 보상.. 워모그 - 매턴 체력 회복 / 열정의 검 - 공격력, 이속 증가 / 체력 100% 회복하기
+ * 티모 실명 때문에 디버프 추가가 필요하다.... Effect 클래스 재사용해서... 네임스페이스 정해놓고 처리하면
+ * ㅁ13. 스토리 추가하기
  */
 
 import readlineSync from 'readline-sync';
 import chalk from 'chalk';
-import { Player, Yumi } from './class.js';
+import { Player, Yumi, Teemo } from './class.js';
 
 let turn = 1;
 
 function displayStatus(stage, player, monster) {
+  const debuffList = player.effects
+    .filter((e) => e.isBuff === false)
+    .map((e) => chalk.red(`| ${e.type}`))
+    .join(' | ');
+
   console.log(chalk.magentaBright(`\n=== 현재 상태 ===`));
   console.log(
     chalk.cyanBright(`| Stage: ${stage} | Turn: ${turn} | Level: ${player.lvl}\n`) +
@@ -36,9 +45,10 @@ function displayStatus(stage, player, monster) {
       chalk.green(`| 체력: ${player.maxHp}/${player.hp} (+${player.cond || '0'}) `) +
       chalk.dim(`| 공격력: ${player.atk} `) +
       chalk.yellowBright(`| 방어력: ${player.def} `) +
-      chalk.blueBright(`| 이동 속도: ${Math.floor(player.mov)}\n`) +
+      chalk.blueBright(`| 이동 속도: ${Math.floor(player.mov)} `) +
+      debuffList +
       // 몬스터 상태
-      chalk.redBright(`| ${monster.name} 정보 `) +
+      chalk.redBright(`\n| ${monster.name} 정보 `) +
       chalk.green(`| 체력: ${monster.maxHp}/${monster.hp} `) +
       chalk.dim(`| 공격력: ${monster.atk} `) +
       chalk.yellowBright(`| 방어력: ${monster.def} `) +
@@ -202,6 +212,11 @@ const battle = async (stage, player, monster) => {
           }
           break;
         case '티모':
+          if (monster.mana >= 80 && Math.random() <= 0.4) {
+            logs.push(monster.skillQ(player, receiveDamage));
+          } else {
+            logs.push(monster.attack(player, receiveDamage));
+          }
           break;
         case '다리우스':
           break;
@@ -232,7 +247,7 @@ export async function startGame() {
 
   while (stage <= 10) {
     // 스테이지 배열을 랜덤하게 생성하고 그에 맞는 적 인스턴스가 생성되어야 함
-    const monster = new Yumi(stage);
+    const monster = new Teemo(stage);
     await battle(stage, player, monster);
 
     // 스테이지 클리어

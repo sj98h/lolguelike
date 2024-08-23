@@ -56,7 +56,7 @@ export class Player {
         new Effect(
           'Q',
           2,
-          (target) => (target.mov = target.initMov * 1.3),
+          (target) => (target.mov = target.mov * 1.3),
           (target) => (target.mov = target.initMov),
         ),
       );
@@ -162,11 +162,12 @@ export class Monster {
       player.hp -= receiveDamage - player.cond;
       player.cond = 0;
     }
-    return chalk.red(`몬스터가 때려요. 피해-> -${receiveDamage}`);
+    return chalk.red(`${this.name}의 기본 공격..! 피해-> -${receiveDamage}`);
   }
 }
 
 // monster 자식 클래스
+// 유미
 export class Yumi extends Monster {
   constructor(stage) {
     super(stage);
@@ -179,8 +180,46 @@ export class Yumi extends Monster {
     this.def = this.initDef;
     this.mov = 330;
     this.mana = 440;
+    this.manaRegen = 16;
   }
-  // q 스킬 메소드
+  // q 스킬
+  skillQ(player, receiveDamage) {
+    this.mana -= 70;
+    player.applyEffect(
+      new Effect(
+        '둔화',
+        2,
+        (target) => (target.mov = target.mov * 0.7),
+        (target) => (target.mov = target.initMov),
+      ),
+    );
+    Shield.isShield(player, receiveDamage, 1.3);
+    return chalk.red(`${this.name}의 사르르탄! 느려진다.. 피해-> -${receiveDamage * 1.3}`);
+  }
+}
+
+// 티모
+export class Teemo extends Monster {
+  constructor(stage) {
+    super(stage);
+    this.name = '티모';
+    this.maxHp = 598 + (stage - 1) * 104;
+    this.hp = this.maxHp;
+    this.initAtk = 54 + (stage - 1) * 3;
+    this.atk = this.initAtk;
+    this.initDef = 24 + (stage - 1) * 5;
+    this.def = this.initDef;
+    this.mov = 330;
+    this.mana = 334;
+    this.manaRegen = 9;
+  }
+  // q 스킬
+  skillQ(player, receiveDamage) {
+    this.mana -= 80;
+    // 실명 효과 로직이 필요함
+    Shield.isShield(player, receiveDamage, 1.1);
+    return chalk.red(`${this.name}의 실명 다트! 안 보인다.. 피해-> -${receiveDamage * 1.1}`);
+  }
 }
 
 // 턴 수 적용을 받는 스탯 변동 효과
@@ -193,5 +232,19 @@ export class Effect {
     this.removeE = removeE;
     // 평타 강화용
     this.active = true;
+  }
+}
+
+// 몬스터 공격 시 플레이어 실드 처리
+export class Shield {
+  // 계수를 파라미터로 전달하여 동적으로 처리하면 좋겠다
+  static isShield(player, receiveDamage, deg) {
+    // 플레이어 실드 > 피해량
+    if (player.cond >= receiveDamage * deg) {
+      player.cond -= receiveDamage * deg;
+    } else {
+      player.hp -= receiveDamage * 1.5 - player.cond;
+      player.cond = 0;
+    }
   }
 }

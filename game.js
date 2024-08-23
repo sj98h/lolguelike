@@ -11,7 +11,7 @@
  * 배열에 1,2,3 요소가 각각 3개씩 들어가게, -> 3개 단위로 중복되지 않게 1, 2, 3을 할당
  * -> 마지막 요소는 -1 eg. [2,1,3, 1,2,3 3,1,2 ,-1] => 총 10 스테이지
  * 1번 = 유미 / 2번 = 티모 / 3번 = 다리우스 / -1번 = 트린보스 // arr[stage-1]를 참조하여 적 인스턴스 생성
- * 8. 스테이지가 올라갈 수록 스탯 상향
+ * ㅁ8. 스테이지가 올라갈 수록 스탯 상향
  * 일반 몹은 스킬 1개씩만 구현... 너무 많다......
  * ㅁ회피 폐기하고 점멸 도주만 구현
  * 9. 레벨 기능 + 레벨에 따른 스킬 해금 선택
@@ -36,7 +36,7 @@ function displayStatus(stage, player, monster) {
       chalk.green(`| 체력: ${player.maxHp}/${player.hp} (+${player.cond || '0'}) `) +
       chalk.dim(`| 공격력: ${player.atk} `) +
       chalk.yellowBright(`| 방어력: ${player.def} `) +
-      chalk.blueBright(`| 이동 속도: ${player.mov}\n`) +
+      chalk.blueBright(`| 이동 속도: ${Math.floor(player.mov)}\n`) +
       // 몬스터 상태
       chalk.redBright(`| ${monster.name} 정보 `) +
       chalk.green(`| 체력: ${monster.maxHp}/${monster.hp} `) +
@@ -191,7 +191,26 @@ const battle = async (stage, player, monster) => {
       return;
     } else {
       // 몬스터 행동
-      logs.push(monster.attack(player, receiveDamage));
+      // 마나가 있으면 40% 확률로 스킬 사용
+      // 나중에 마나랑 확률 파라미터로 전달하여 동적으로 처리하기
+      switch (monster.name) {
+        case '유미':
+          if (monster.mana >= 70 && Math.random() <= 0.4) {
+            logs.push(monster.skillQ(player, receiveDamage));
+          } else {
+            logs.push(monster.attack(player, receiveDamage));
+          }
+          break;
+        case '티모':
+          break;
+        case '다리우스':
+          break;
+        case '트린다미어':
+          break;
+        default:
+          logs.push(chalk.red('오류 발생'));
+          break;
+      }
       turn++;
     }
   }
@@ -209,8 +228,10 @@ export async function startGame() {
   console.clear();
   const player = new Player();
   let stage = 1;
+  // 스테이지 배열 랜덤 생성 로직 추가 예정
 
   while (stage <= 10) {
+    // 스테이지 배열을 랜덤하게 생성하고 그에 맞는 적 인스턴스가 생성되어야 함
     const monster = new Yumi(stage);
     await battle(stage, player, monster);
 

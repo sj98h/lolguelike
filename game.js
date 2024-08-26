@@ -1,30 +1,3 @@
-/**
- * @todo
- * ㅁ1. 턴 수에 따라 지속되는 효과를 처리할 로직이 필요하다
- * eg. Q 스킬 이속 증가 효과가 2턴 뒤에 사라져야함 / n 턴 동안 슬로우가 묻는 스킬...
- * ㅁ2. 방어력, 이동 속도는 변동 후 원복되어야 한다. 따라서 같은 값을 참조하는 변수를 추가해야 한다.
- * 3. 소리가 나오면 좋겠다.
- * ㅁ4. 메시지 간 딜레이를 넣으면 좋겠다 -> 입력 받아서 진행하는 것으로 대체
- * ㅁ5. 점멸 (도망) 기능. 추가 기획 필요 체력이 50% 이하일 때만 사용 가능하게, 성공확률은 이속 공식을 참조하여 회피 확률과 동일하게 하면 될듯
- * ㅁ6. 적 클래스 추가. 일반 몹 3개, 보스몹 1개 (유미, 티모, 다리우스) / (트린다미어)
- * ㅁㄴ7. 게임 시작 시 각 스테이지에서 출현할 몹들을 정할 로직.
- * 배열에 1,2,3 요소가 각각 3개씩 들어가게, -> 3개 단위로 중복되지 않게 1, 2, 3을 할당
- * -> 마지막 요소는 -1 eg. [2,1,3, 1,2,3 3,1,2 ,-1] => 총 10 스테이지
- * 1번 = 유미 / 2번 = 티모 / 3번 = 다리우스 / -1번 = 트린보스 // arr[stage-1]를 참조하여 적 인스턴스 생성
- * ㅁ8. 스테이지가 올라갈 수록 스탯 상향
- * ㅁ일반 몹은 스킬 1개씩만 구현... 너무 많다......
- * ㅁ회피 폐기하고 점멸 도주만 구현
- * ㅁ9. 레벨 기능 + 레벨에 따른 스킬 해금 선택
- * ㅁ10. 레벨을 올리려면 경험치도 있어야 한다............. / 경험치는 폐기
- * 왜 추가할 게 계속 생기는거지........................
- * ㅁ11. 안배운 스킬 선택시 스킬 효과 턴이 소모됨
- * eg. Q 스킬 사용 후 배우지 않은 R 스킬 선택 시 Q 이속 증가 증발
- * 12. 특정 스테이지 클리어 후 보상이 있으면 좋을듯
- * eg. 1 스테이지 클리어 후 보상.. 워모그 - 매턴 체력 회복 / 열정의 검 - 공격력, 이속 증가 / 체력 100% 회복하기
- * ㅁ티모 실명 때문에 디버프 추가가 필요하다.... Effect 클래스 재사용해서... 네임스페이스 정해놓고 처리하면
- * ㅁ13. 스토리 추가하기
- */
-
 import readlineSync from 'readline-sync';
 import chalk from 'chalk';
 import { Player, Yumi, Teemo, Vayne, Tryndamere } from './class.js';
@@ -47,16 +20,16 @@ function displayStatus(stage, player, monster) {
     chalk.cyanBright(`| Stage: ${stage} | Turn: ${turn} | Level: ${player.lvl}\n`) +
       // 플레이어 상태
       chalk.blueBright(`| 플레이어 정보 `) +
-      chalk.green(`| 체력: ${player.maxHp}/${player.hp} (+${player.cond || '0'}) `) +
+      chalk.green(`| 체력: ${player.maxHp}/${Math.floor(player.hp)} (+${player.cond || '0'}) `) +
       chalk.dim(`| 공격력: ${player.atk} `) +
-      chalk.yellowBright(`| 방어력: ${player.def} `) +
+      chalk.yellowBright(`| 방어력: ${Math.floor(player.def)} `) +
       chalk.blueBright(`| 이동 속도: ${Math.floor(player.mov)} `) +
       debuffList +
       // 몬스터 상태
       chalk.redBright(`\n| ${monster.name} 정보 `) +
-      chalk.green(`| 체력: ${monster.maxHp}/${monster.hp} `) +
+      chalk.green(`| 체력: ${monster.maxHp}/${Math.floor(monster.hp)} `) +
       chalk.dim(`| 공격력: ${monster.atk} `) +
-      chalk.yellowBright(`| 방어력: ${monster.def} `) +
+      chalk.yellowBright(`| 방어력: ${Math.floor(monster.def)} `) +
       chalk.blueBright(`| 이동 속도: ${monster.mov} `) +
       (monster.name === '트린다미어'
         ? chalk.red(`| 분노: ${monster.rage} `)
@@ -330,8 +303,8 @@ export async function startGame() {
     await battle(stage, player, monster);
 
     // 스테이지 클리어
+    player.lvlUp();
     player.rOn = true;
-    player.lvl++;
     turn = 1;
     stage++;
     console.log(chalk.yellow('레벨업!! 스탯이 상승했습니다.'));
@@ -394,4 +367,23 @@ export async function startGame() {
   }
 
   // 10스테이지 클리어 로직 추가 예정
+  // 엔딩
+  const ending = [
+    '나는 오늘도 싸움을 피하지 않았다.',
+    '그것이 탑이니까.',
+    '상대 탑이 탈주했다.',
+    '그리고 우리 팀 바텀이 터졌다.',
+    '패배',
+  ];
+
+  console.clear();
+  ending.forEach((e, idx) => {
+    if (idx === ending.length - 1) {
+      process.stdout.write(chalk.red(e));
+    } else {
+      process.stdout.write(chalk.green(e));
+    }
+    readlineSync.question('');
+  });
+  process.exit(0);
 }

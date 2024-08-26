@@ -3,7 +3,7 @@ import chalk from 'chalk';
 export class Player {
   constructor() {
     this.lvl = 1;
-    this.maxHp = 10000; //690
+    this.maxHp = 690; //690
     this.hp = this.maxHp;
     this.initAtk = 69; // 초기 공격력 69
     this.atk = this.initAtk;
@@ -17,6 +17,14 @@ export class Player {
     this.wHas = false;
     this.eHas = false;
     this.rHas = false;
+  }
+
+  lvlUp() {
+    this.lvl++;
+    this.maxHp += 98;
+    this.hp = this.maxHp;
+    this.atk += 4.5;
+    this.def += 4.2;
   }
 
   applyEffect(effect) {
@@ -308,7 +316,7 @@ export class Tryndamere extends Monster {
     super(stage);
     this.name = '트린다미어';
     this.maxHp = 696 + (stage - 1) * 108;
-    this.hp = 1;
+    this.hp = this.maxHp;
     this.initAtk = 66 + (stage - 1) * 4;
     this.atk = this.initAtk;
     this.initDef = 33 + (stage - 1) * 4;

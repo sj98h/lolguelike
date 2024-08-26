@@ -250,7 +250,7 @@ const battle = async (stage, player, monster) => {
 export async function startGame() {
   console.clear();
   const player = new Player();
-  let stage = 10;
+  let stage = 1;
   let stageArr = [];
   let mob = [1, 2, 3]; // 1: 유미 2: 티모 3: 베인
 

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 export class Player {
   constructor() {
     this.lvl = 1;
-    this.maxHp = 690;
+    this.maxHp = 10000; //690
     this.hp = this.maxHp;
     this.initAtk = 69; // 초기 공격력 69
     this.atk = this.initAtk;
@@ -166,12 +166,7 @@ export class Monster {
 
   attack(player, receiveDamage) {
     // 몬스터의 기본 공격
-    if (player.cond >= receiveDamage) {
-      player.cond -= receiveDamage;
-    } else {
-      player.hp -= receiveDamage - player.cond;
-      player.cond = 0;
-    }
+    Shield.isShield(player, receiveDamage, 1);
     return chalk.red(`${this.name}의 기본 공격..! 피해-> -${receiveDamage}`);
   }
 }
@@ -250,19 +245,35 @@ export class Vayne extends Monster {
     this.name = '베인';
     this.maxHp = 550 + (stage - 1) * 103;
     this.hp = this.maxHp;
-    this.initAtk = 1 + (stage - 1) * 2;
+    this.initAtk = 10 + (stage - 1) * 2;
     this.atk = this.initAtk;
     this.initDef = 23 + (stage - 1) * 4;
     this.def = this.initDef;
     this.mov = 330;
     this.mana = 231;
     this.manaRegen = 6;
+    this.atkCnt = 0;
   }
-  // w 스킬
-  skillW(player, receiveDamage) {
-    // 기본 공격 3회 시 최대 체력의 10% 만큼 고정 피해 입히는 로직 필요
-    Shield.isShield(player, receiveDamage, 1.5);
-    return chalk.red(`${this.name}의 학살 피해-> -${receiveDamage * 1.5}`);
+
+  attack(player, receiveDamage) {
+    // 베인 평타
+    this.atkCnt++;
+
+    if (this.atkCnt >= 3) {
+      if (player.cond >= player.maxHp * 0.1 + receiveDamage) {
+        player.cond -= player.maxHp * 0.1 + receiveDamage;
+      } else {
+        player.hp -= player.maxHp * 0.1 + receiveDamage - player.cond;
+        player.cond = 0;
+      }
+      this.atkCnt = 0;
+      return chalk.red(
+        `${this.name}의 은화살!! 따갑다.. 피해-> -${Math.floor(player.maxHp * 0.1 + receiveDamage)}`,
+      );
+    } else {
+      super.attack(player, receiveDamage);
+      return chalk.red(`${this.name}의 기본 공격..! 피해-> -${receiveDamage}`);
+    }
   }
 }
 
@@ -281,13 +292,26 @@ export class Tryndamere extends Monster {
     this.rage = 0;
     this.mana = null;
     this.manaRegen = null;
+    this.rOn = true;
+  }
+
+  // 트린 궁 로직 오버라이딩
+  durEffect() {
+    super.durEffect();
+    if (this.rage > 100) this.rage = 100; // 분노 100 안넘게
+  }
+
+  attack(player, receiveDamage) {
+    // 트린 평타
+    super.attack(player, receiveDamage);
+    this.rage += 10;
+    return chalk.red(`${this.name}의 기본 공격..! 피해-> -${receiveDamage}`);
   }
   // q 스킬
   skillQ() {
     // 분노 = 0 / 분노 * 2 만큼 체력 회복
-    this.hp += this.rage * 2;
-    this.rage = 0;
-    return chalk.red(`${this.name}가 피를 갈망한다.. 회복-> +${this.rage * 2}`);
+    this.hp += this.rage * 2 + 10;
+    return chalk.red(`${this.name}가 피를 갈망한다.. 회복-> +${this.rage * 2 + 10}`);
   }
   // w 스킬
   skillW(player) {
@@ -298,7 +322,7 @@ export class Tryndamere extends Monster {
         3,
         (target) => {
           target.mov = target.mov * 0.9;
-          target.atk = target.mov * 0.9;
+          target.atk = target.atk * 0.9;
         },
         (target) => {
           target.mov = target.initMov;
@@ -308,14 +332,29 @@ export class Tryndamere extends Monster {
       ),
     );
     return chalk.red(
-      `${this.name}가 놀린다.. 공격력/이속 감소-> -${player.atk * 0.1}/-${player.mov * 0.1}`,
+      `${this.name}가 놀린다.. 공격력/이속 감소-> -${Math.floor(player.atk * 0.1)}/-${Math.floor(player.mov * 0.1)}`,
     );
   }
   // e 스킬
-  skillE(player) {
+  skillE(player, receiveDamage) {
     // 공격력 300% 피해
-
-    return chalk.red(`${this.name}가 피를 갈망한다.. 회복-> +${this.rage * 2}`);
+    Shield.isShield(player, receiveDamage, 2);
+    return chalk.red(`${this.name}의 회전 베기!! 피해-> -${Math.floor(receiveDamage * 2)}`);
+  }
+  // r 스킬
+  skillR() {
+    // 3턴간 체력 1 밑으로 떨어지지 않음
+    this.applyEffect(
+      new Effect(
+        '불사의 분노',
+        3,
+        () => (this.rage = 100),
+        () => null,
+        false,
+      ),
+    );
+    this.rOn = false;
+    return chalk.red(`${this.name}가 죽지 않는다!? 분노-> +100`);
   }
 }
 
@@ -370,7 +409,7 @@ export class Shield {
     if (player.cond >= receiveDamage * deg) {
       player.cond -= receiveDamage * deg;
     } else {
-      player.hp -= receiveDamage * 1.5 - player.cond;
+      player.hp -= receiveDamage * deg - player.cond;
       player.cond = 0;
     }
   }

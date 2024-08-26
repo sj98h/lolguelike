@@ -27,12 +27,17 @@
 
 import readlineSync from 'readline-sync';
 import chalk from 'chalk';
-import { Player, Yumi, Teemo } from './class.js';
+import { Player, Yumi, Teemo, Vayne, Tryndamere, Darius } from './class.js';
 
 let turn = 1;
 
 function displayStatus(stage, player, monster) {
   const debuffList = player.effects
+    .filter((e) => e.isBuff === false)
+    .map((e) => chalk.red(`| ${e.type}`))
+    .join(' | ');
+
+  const undying = monster.effects
     .filter((e) => e.isBuff === false)
     .map((e) => chalk.red(`| ${e.type}`))
     .join(' | ');
@@ -53,7 +58,10 @@ function displayStatus(stage, player, monster) {
       chalk.dim(`| 공격력: ${monster.atk} `) +
       chalk.yellowBright(`| 방어력: ${monster.def} `) +
       chalk.blueBright(`| 이동 속도: ${monster.mov} `) +
-      (stage === 10 ? chalk.red(`| 분노: ${monster.rage}`) : chalk.cyan(`| 마나: ${monster.mana}`)),
+      (monster.name === '트린다미어'
+        ? chalk.red(`| 분노: ${monster.rage} `)
+        : chalk.cyan(`| 마나: ${monster.mana}`)) +
+      undying,
   );
   console.log(chalk.magentaBright(`=====================\n`));
 }
@@ -197,7 +205,7 @@ const battle = async (stage, player, monster) => {
     logs.push(returnAct);
 
     // 몬스터 체력 0
-    if (monster.hp <= 0) {
+    if (monster.hp <= 0 && monster.name !== '트린다미어') {
       return;
     } else {
       // 몬스터 행동
@@ -218,9 +226,35 @@ const battle = async (stage, player, monster) => {
             logs.push(monster.attack(player, receiveDamage));
           }
           break;
-        case '다리우스':
+        case '베인':
+          logs.push(monster.attack(player, receiveDamage));
           break;
         case '트린다미어':
+          const isEffect = monster.effects.find((e) => e.type === '불사의 분노');
+
+          if (monster.hp <= 0 && monster.rOn) {
+            // r
+            logs.push(monster.skillR());
+          } else if (monster.hp <= 0 && !isEffect) {
+            return; // 궁없을때 뒤지면
+          } else if (Math.random() >= 0 && Math.random() <= 0.2) {
+            // q
+            logs.push(monster.skillQ());
+            monster.rage = 0;
+          } else if (Math.random() > 0.2 && Math.random() <= 0.4) {
+            // w
+            logs.push(monster.skillW(player));
+          } else if (Math.random() > 0.4 && Math.random() <= 0.6) {
+            // e
+            logs.push(monster.skillE(player, receiveDamage));
+          } else {
+            logs.push(monster.attack(player, receiveDamage));
+          }
+          if (monster.hp <= 0 && isEffect) {
+            monster.hp = 1; // 체력을 1로 설정하여 0 이하로 떨어지지 않음
+          }
+          break;
+        case '다리우스':
           break;
         default:
           logs.push(chalk.red('오류 발생'));
@@ -247,7 +281,7 @@ export async function startGame() {
 
   while (stage <= 10) {
     // 스테이지 배열을 랜덤하게 생성하고 그에 맞는 적 인스턴스가 생성되어야 함
-    const monster = new Teemo(stage);
+    const monster = new Tryndamere(stage);
     await battle(stage, player, monster);
 
     // 스테이지 클리어

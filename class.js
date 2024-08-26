@@ -389,6 +389,11 @@ export class Tryndamere extends Monster {
     this.rOn = false;
     return chalk.red(`${this.name}가 죽지 않는다!? 분노-> +100`);
   }
+  // 패시브 분노만큼 공격력 추가
+  rageAtk() {
+    this.atk = this.initAtk;
+    this.atk += this.rage;
+  }
 }
 
 // 다리우스

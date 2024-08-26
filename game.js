@@ -210,14 +210,14 @@ const battle = async (stage, player, monster) => {
             logs.push(monster.skillR());
           } else if (monster.hp <= 0 && !isEffect) {
             return; // 궁없을때 뒤지면
-          } else if (Math.random() >= 0 && Math.random() <= 0.2) {
+          } else if (Math.random() >= 0 && Math.random() <= 0.05) {
             // q
             logs.push(monster.skillQ());
             monster.rage = 0;
-          } else if (Math.random() > 0.2 && Math.random() <= 0.4) {
+          } else if (Math.random() > 0.05 && Math.random() <= 0.1) {
             // w
             logs.push(monster.skillW(player));
-          } else if (Math.random() > 0.4 && Math.random() <= 0.6) {
+          } else if (Math.random() > 0.1 && Math.random() <= 0.3) {
             // e
             logs.push(monster.skillE(player, receiveDamage));
           } else {
@@ -226,9 +226,10 @@ const battle = async (stage, player, monster) => {
           if (monster.hp <= 0 && isEffect) {
             monster.hp = 1; // 체력을 1로 설정하여 0 이하로 떨어지지 않음
           }
+          monster.rageAtk();
           break;
-        case '다리우스':
-          break;
+        // case '다리우스':
+        //   break;
         default:
           logs.push(chalk.red('오류 발생'));
           break;
@@ -249,7 +250,7 @@ const battle = async (stage, player, monster) => {
 export async function startGame() {
   console.clear();
   const player = new Player();
-  let stage = 1;
+  let stage = 10;
   let stageArr = [];
   let mob = [1, 2, 3]; // 1: 유미 2: 티모 3: 베인
 

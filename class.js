@@ -60,7 +60,7 @@ export class Player {
     }
   }
 
-  skillQ() {
+  skillQ(monster) {
     if (this.qHas) {
       this.applyEffect(
         new Effect(
@@ -72,11 +72,18 @@ export class Player {
       );
       return chalk.blue('결정타(Q)!! 다음 기본 공격이 강화되고 이동 속도가 30% 증가합니다.');
     } else {
+      // 안배운 스킬 사용 시 효과 턴 갱신되는 문제 방지.. 개선된 버전이 필요할거 같다
+      this.effects.forEach((e) => {
+        e.duration++;
+      });
+      monster.effects.forEach((e) => {
+        e.duration++;
+      });
       return chalk.yellow('스킬을 배우지 않았습니다.');
     }
   }
 
-  skillW(wShield) {
+  skillW(wShield, monster) {
     if (this.wHas) {
       this.applyEffect(
         new Effect(
@@ -88,6 +95,12 @@ export class Player {
       );
       return chalk.blue(`용기(W) 맞을 용기가 생겼다. 보호막-> +${wShield}`);
     } else {
+      this.effects.forEach((e) => {
+        e.duration++;
+      });
+      monster.effects.forEach((e) => {
+        e.duration++;
+      });
       return chalk.yellow('스킬을 배우지 않았습니다.');
     }
   }
@@ -107,6 +120,12 @@ export class Player {
         `심판(E) 눈도 깜짝 안 한다~!. 피해-> -${eDamage} | 방어력-> -${monster.def * 0.3}`,
       );
     } else {
+      this.effects.forEach((e) => {
+        e.duration++;
+      });
+      monster.effects.forEach((e) => {
+        e.duration++;
+      });
       return chalk.yellow('스킬을 배우지 않았습니다.');
     }
   }
@@ -117,6 +136,12 @@ export class Player {
       monster.hp -= rDamage;
       return chalk.blue(`데마시아의 정의(R) 한 뚝배기!! 피해-> ${rDamage}`);
     } else {
+      this.effects.forEach((e) => {
+        e.duration++;
+      });
+      monster.effects.forEach((e) => {
+        e.duration++;
+      });
       return chalk.yellow('스킬을 배우지 않았습니다.');
     }
   }
@@ -283,7 +308,7 @@ export class Tryndamere extends Monster {
     super(stage);
     this.name = '트린다미어';
     this.maxHp = 696 + (stage - 1) * 108;
-    this.hp = this.maxHp;
+    this.hp = 1;
     this.initAtk = 66 + (stage - 1) * 4;
     this.atk = this.initAtk;
     this.initDef = 33 + (stage - 1) * 4;
@@ -359,28 +384,28 @@ export class Tryndamere extends Monster {
 }
 
 // 다리우스
-export class Darius extends Monster {
-  constructor(stage) {
-    super(stage);
-    this.name = '다리우스';
-    this.maxHp = 652 + (stage - 1) * 114;
-    this.hp = this.maxHp;
-    this.initAtk = 64 + (stage - 1) * 5;
-    this.atk = this.initAtk;
-    this.initDef = 39 + (stage - 1) * 5;
-    this.def = this.initDef;
-    this.mov = 340;
-    this.mana = 263;
-    this.manaRegen = 6;
-  }
-  // q 스킬
-  skillQ(player, receiveDamage) {
-    this.mana -= 35;
-    // 50% 확률로 잃은 체력의 5% 회복 추가 예정
-    Shield.isShield(player, receiveDamage, 1.5);
-    return chalk.red(`${this.name}의 학살..! 피해-> -${receiveDamage * 1.5}`);
-  }
-}
+// export class Darius extends Monster {
+//   constructor(stage) {
+//     super(stage);
+//     this.name = '다리우스';
+//     this.maxHp = 652 + (stage - 1) * 114;
+//     this.hp = this.maxHp;
+//     this.initAtk = 64 + (stage - 1) * 5;
+//     this.atk = this.initAtk;
+//     this.initDef = 39 + (stage - 1) * 5;
+//     this.def = this.initDef;
+//     this.mov = 340;
+//     this.mana = 263;
+//     this.manaRegen = 6;
+//   }
+//   // q 스킬
+//   skillQ(player, receiveDamage) {
+//     this.mana -= 35;
+//     // 50% 확률로 잃은 체력의 5% 회복 추가 예정
+//     Shield.isShield(player, receiveDamage, 1.5);
+//     return chalk.red(`${this.name}의 학살..! 피해-> -${receiveDamage * 1.5}`);
+//   }
+// }
 
 /**
  * 턴 수 적용을 받는 스탯 변동 효과
